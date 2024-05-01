@@ -1,0 +1,149 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="authoring-tool" content="Adobe_Animate_CC">
+		<title>demoAnimateScroller</title>
+		<style>
+		body {
+			overflow:hidden;
+		}
+		#animation_container {
+			position:absolute;
+			margin:auto;
+			left:-100%;right:-100%;
+		}
+		#text_container{
+ 			display: none;
+/*   		display: block; */  /*for debugging */
+			border: 2px solid #f00;
+			background: rgba(255, 255, 255, 0.92);
+			width: 340px;
+			height: 130px;
+			position: absolute;
+			padding: 10px;
+			font-size: 2rem;
+		}
+		</style>
+		<script src="createjs.min.js"></script>
+		<script src="demoAnimateScroller.js?1"></script>
+		<script type="text/javascript" src="animate_scroller_script.js"></script>
+		<script>
+		var canvas, stage, exportRoot, anim_container, dom_overlay_container, fnStartAnimation;
+		function init() {
+			canvas = document.getElementById("canvas");
+			anim_container = document.getElementById("animation_container");
+			dom_overlay_container = document.getElementById("dom_overlay_container");
+			var comp=AdobeAn.getComposition("45915F660C7E48439B87013E204E9817");
+			var lib=comp.getLibrary();
+			handleComplete({},comp);
+		}
+		function handleComplete(evt,comp) {
+			var lib=comp.getLibrary();
+			var ss=comp.getSpriteSheet();
+			canvas.style.display = 'block';
+			exportRoot = new lib.demoAnimateScroller();
+			stage = new lib.Stage(canvas);
+				stage.enableMouseOver();
+			fnStartAnimation = function() {
+				stage.addChild(exportRoot);
+				createjs.Ticker.framerate = lib.properties.fps;
+				createjs.Ticker.addEventListener("tick", stage);
+			}
+			//Code to support hidpi screens and responsive scaling.
+			//AdobeAn.makeResponsive(false,'both',false,1,[canvas,anim_container,dom_overlay_container]);
+			AdobeAn.makeResponsive(true,'both',true,2,[canvas,anim_container,dom_overlay_container]);
+			AdobeAn.compositionLoaded(lib.properties.id);
+			fnStartAnimation();
+		}
+		</script>
+	</head>
+	<body onload="init();" style="margin:0px;">
+		<div id="animation_container" style="background-color:rgba(255, 255, 255, 1.00); width:1600px; height:1340px">
+			<canvas id="canvas" width="1600" height="1340" style="position: absolute; display: none; background-color:rgba(255, 255, 255, 1.00);"></canvas>
+			<div id="dom_overlay_container" style="pointer-events:none; overflow:hidden; width:1600px; height:1340px; position: absolute; left: 0px; top: 0px; display: none;">
+			</div>
+		</div>
+		<div id="text_container">debug</div>
+<script>
+let startY, speed, canvasTimeline, endanim, currentFrame;
+var counter = 0;
+var framesamount = 0;
+var smooth = 3;
+let scrollScale = 0.06; // Scaling factor for the wheel delta value
+
+function updateFrame(currentFrame) {
+    console.log("Current Frame from Animate: ", currentFrame);
+    counter = currentFrame; // receive framenumber from anim, to start at the right frame when start scrolling during intro animation
+}
+function sendTotalFrames(totalFrames) {
+    console.log("totalFrames from Animate: ", totalFrames);
+    framesamount = totalFrames;
+}
+
+document.addEventListener('touchstart', touchstartHandler, {passive: false});
+document.addEventListener('touchmove', touchmoveHandler, {passive: false});
+document.addEventListener('touchend', touchendHandler, {passive: false});
+
+function touchstartHandler(e) {
+    startY = e.changedTouches[0].pageY;
+}
+
+function touchmoveHandler(e) {
+    e.preventDefault();
+    speed = (e.changedTouches[0].pageY - startY) / 30;
+    startY = e.changedTouches[0].pageY;
+    if (counter >= 0 && counter < framesamount) {
+        if (counter > 1 && speed > 0) {
+            counter -= Math.max(1, Math.ceil(smooth * speed));
+        } else if (counter < (framesamount - 1) && speed < 0) {
+            counter += Math.max(1, Math.abs(Math.ceil(smooth * speed)));
+        }
+        canvasTimeline.gotoAndStop(counter);
+    }
+    updateTextContainer('speed: ' + speed + "<br>counter:" + counter);
+}
+
+function touchendHandler(e) {
+    endanim = setInterval(endanimation, 20);
+}
+
+function endanimation() {
+    updateTextContainer('speed: ' + speed + "<br>counter:" + counter);
+    speed *= 0.9;
+    if (Math.abs(speed) < 0.1) {
+        clearInterval(endanim);
+    } else if (counter >= 0 && counter < framesamount) {
+        if (counter > 1 && speed > 0) {
+            counter -= Math.max(1, Math.ceil(smooth * speed));
+        } else if (counter < (framesamount - 1) && speed < 0) {
+            counter += Math.max(1, Math.abs(Math.ceil(smooth * speed)));
+        }
+        canvasTimeline.gotoAndStop(counter);
+    }
+}
+
+function updateTextContainer(htmlContent) {
+    document.getElementById('text_container').innerHTML = htmlContent;
+}
+
+document.getElementById('animation_container').addEventListener('wheel', function(ev) {
+    let val = ev.deltaY * scrollScale * -1; // Apply scaling factor
+    if (counter >= 0 && counter < framesamount) {
+        if (counter > 1 && val > 0) {
+            counter -= Math.max(1, Math.ceil(smooth * val));
+        } else if (counter < (framesamount - 1) && val < 0) {
+        	if(counter+Math.max(1, Math.abs(Math.ceil(smooth * val)))>framesamount-1){
+        		counter == framesamount-1;
+        	}else{
+        		counter += Math.max(1, Math.abs(Math.ceil(smooth * val)));
+        	}
+           updateTextContainer('counter'+counter);
+        }
+        canvasTimeline.gotoAndStop(counter);
+    }
+    updateTextContainer('speed: ' + speed + "<br>counter:" + counter + "<br>val:" + val.toFixed(2));
+});
+</script>
+
+	</body>
+</html>
